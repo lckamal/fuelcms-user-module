@@ -5,6 +5,7 @@ class User extends CI_Controller {
 	function __construct()
 	{
 		parent::__construct();
+
 		$this->load->library('user/ion_auth');
 		$this->load->library('form_validation');
 		$this->load->helper('url');
@@ -13,8 +14,8 @@ class User extends CI_Controller {
 
 		$this->form_validation->set_error_delimiters($this->config->item('error_start_delimiter', 'ion_auth'), $this->config->item('error_end_delimiter', 'ion_auth'));
 
-		$this->lang->load('user');
-        $this->lang->load('ion_auth');
+		$this->lang->load('user/user');
+        $this->lang->load('user/ion_auth');
 		$this->load->helper('language');
 	}
 
@@ -30,7 +31,7 @@ class User extends CI_Controller {
         $identity = $this->config->item('identity', 'ion_auth');
         $user_id = $this->session->userdata('user_id');
 		//list the users
-		$this->data['user'] = $this->ion_auth_model->where('active',1)->user($user_id)->row();
+		$this->data['user'] = $this->ion_auth->user()->row();
 		$this->_render_page('user/index', $this->data);
 	}
 
@@ -78,6 +79,8 @@ class User extends CI_Controller {
 				'id' => 'password',
 				'type' => 'password',
 			);
+            
+            $this->data['login_identity'] = $this->config->item('identity', 'ion_auth');
 
 			$this->_render_page('user/login', $this->data);
 		}
@@ -165,7 +168,7 @@ class User extends CI_Controller {
 	}
 
     //register a new user
-    function register($group = 'students')
+    function register($group = 'student')
     {
         if ($this->ion_auth->logged_in())
         {
@@ -182,13 +185,13 @@ class User extends CI_Controller {
         $this->form_validation->set_rules('last_name', $this->lang->line('create_user_validation_lname_label'), 'required|xss_clean');
         $this->form_validation->set_rules('email', $this->lang->line('create_user_validation_email_label'), 'required|valid_email|is_unique['.$tables['users'].'.email]');
         $this->form_validation->set_rules('phone', $this->lang->line('create_user_validation_phone_label'), 'required|xss_clean');
-        $this->form_validation->set_rules('company', $this->lang->line('create_user_validation_company_label'), 'required|xss_clean');
+        $this->form_validation->set_rules('company', $this->lang->line('create_user_validation_company_label'), 'xss_clean');
         $this->form_validation->set_rules('password', $this->lang->line('create_user_validation_password_label'), 'required|min_length[' . $this->config->item('min_password_length', 'ion_auth') . ']|max_length[' . $this->config->item('max_password_length', 'ion_auth') . ']|matches[password_confirm]');
         $this->form_validation->set_rules('password_confirm', $this->lang->line('create_user_validation_password_confirm_label'), 'required');
 
         if ($this->form_validation->run() == true)
         {
-            $username = strtolower($this->input->post('first_name')) . ' ' . strtolower($this->input->post('last_name'));
+            $username = strtolower($this->input->post('first_name')) . '' . strtolower($this->input->post('last_name'));
             $email    = strtolower($this->input->post('email'));
             $password = $this->input->post('password');
 
@@ -258,6 +261,106 @@ class User extends CI_Controller {
 
             $this->_render_page('user/register', $this->data);
         }
+    }
+
+    //edit profile
+    function edit_profile()
+    {
+        $this->data['title'] = "Edit User";
+
+        if (!$this->ion_auth->logged_in())
+        {
+            redirect('user/login');
+        }
+        $user = $this->ion_auth->user()->row();
+        $id = $user->id;
+        //validate form input
+        $this->form_validation->set_rules('first_name', $this->lang->line('edit_user_validation_fname_label'), 'required|xss_clean');
+        $this->form_validation->set_rules('last_name', $this->lang->line('edit_user_validation_lname_label'), 'required|xss_clean');
+        $this->form_validation->set_rules('phone', $this->lang->line('edit_user_validation_phone_label'), 'required|xss_clean');
+        $this->form_validation->set_rules('company', $this->lang->line('edit_user_validation_company_label'), 'required|xss_clean');
+        $this->form_validation->set_rules('groups', $this->lang->line('edit_user_validation_groups_label'), 'xss_clean');
+
+        if (isset($_POST) && !empty($_POST))
+        {
+            // do we have a valid request?
+            if ($this->_valid_csrf_nonce() === FALSE || $id != $this->input->post('id'))
+            {
+                show_error($this->lang->line('error_csrf'));
+            }
+
+            $data = array(
+                'first_name' => $this->input->post('first_name'),
+                'last_name'  => $this->input->post('last_name'),
+                'company'    => $this->input->post('company'),
+                'phone'      => $this->input->post('phone'),
+            );
+
+
+            //update the password if it was posted
+            if ($this->input->post('password'))
+            {
+                $this->form_validation->set_rules('password', $this->lang->line('edit_user_validation_password_label'), 'required|min_length[' . $this->config->item('min_password_length', 'ion_auth') . ']|max_length[' . $this->config->item('max_password_length', 'ion_auth') . ']|matches[password_confirm]');
+                $this->form_validation->set_rules('password_confirm', $this->lang->line('edit_user_validation_password_confirm_label'), 'required');
+
+                $data['password'] = $this->input->post('password');
+            }
+
+            if ($this->form_validation->run() === TRUE)
+            {
+                $this->ion_auth->update($user->id, $data);
+
+                //check to see if we are creating the user
+                //redirect them back to the admin page
+                $this->session->set_flashdata('success', "Profile saved successfully");
+                redirect('user');
+            }
+        }
+
+        //display the edit user form
+        $this->data['csrf'] = $this->_get_csrf_nonce();
+
+        //set the flash data error message if there is one
+        $this->data['message'] = (validation_errors() ? validation_errors() : ($this->ion_auth->errors() ? $this->ion_auth->errors() : $this->session->flashdata('success')));
+
+        //pass the user to the view
+        $this->data['user'] = $user;
+
+        $this->data['first_name'] = array(
+            'name'  => 'first_name',
+            'id'    => 'first_name',
+            'type'  => 'text',
+            'value' => $this->form_validation->set_value('first_name', $user->first_name),
+        );
+        $this->data['last_name'] = array(
+            'name'  => 'last_name',
+            'id'    => 'last_name',
+            'type'  => 'text',
+            'value' => $this->form_validation->set_value('last_name', $user->last_name),
+        );
+        $this->data['company'] = array(
+            'name'  => 'company',
+            'id'    => 'company',
+            'type'  => 'text',
+            'value' => $this->form_validation->set_value('company', $user->company),
+        );
+        $this->data['phone'] = array(
+            'name'  => 'phone',
+            'id'    => 'phone',
+            'type'  => 'text',
+            'value' => $this->form_validation->set_value('phone', $user->phone),
+        );
+        $this->data['password'] = array(
+            'name' => 'password',
+            'id'   => 'password',
+            'type' => 'password'
+        );
+        $this->data['password_confirm'] = array(
+            'name' => 'password_confirm',
+            'id'   => 'password_confirm',
+            'type' => 'password'
+        );
+        $this->_render_page('user/edit_profile', $this->data);
     }
 
 	//forgot password
@@ -412,16 +515,16 @@ class User extends CI_Controller {
 		$this->load->helper('string');
 		$key   = random_string('alnum', 8);
 		$value = random_string('alnum', 20);
-		$this->session->set_flashdata('csrfkey', $key);
-		$this->session->set_flashdata('csrfvalue', $value);
+		$this->session->set_userdata('csrfkey', $key);
+		$this->session->set_userdata('csrfvalue', $value);
 
 		return array($key => $value);
 	}
 
 	function _valid_csrf_nonce()
 	{
-		if ($this->input->post($this->session->flashdata('csrfkey')) !== FALSE &&
-			$this->input->post($this->session->flashdata('csrfkey')) == $this->session->flashdata('csrfvalue'))
+		if ($this->input->post($this->session->userdata('csrfkey')) !== FALSE &&
+			$this->input->post($this->session->userdata('csrfkey')) == $this->session->userdata('csrfvalue'))
 		{
 			return TRUE;
 		}
@@ -431,11 +534,11 @@ class User extends CI_Controller {
 		}
 	}
 
-	function _render_page($view, $data=null, $render=false)
+	function _render_page($view, $vars=null, $render=false)
 	{
-        $vars = $data;
-        //$vars['flashdata'] = $this->load->module_view('user', 'user/_block/flashdata', $vars, TRUE);
         $vars['body'] = $this->load->module_view('user', 'user/'.$view, $vars, TRUE);
+        $vars['js'] = array('bootstrap/bootstrap.min.js');
+        $vars['css'] = array('bootstrap/bootstrap.min.css');
         $layout = (! empty($layout) ) ? $layout : 'main';
         $output = $this->load->view('_layouts/'.$layout, $vars, TRUE);
         

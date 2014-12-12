@@ -23,6 +23,8 @@ $lang['error_csrf'] = 'Dit formulier is niet door onze veiligheidscontrole geraa
 // Login
 $lang['login_heading']         = 'Login';
 $lang['login_subheading']      = 'Gelieve in te loggen met je email/gebruikersnaam en wachtwoord.';
+$lang['login_identity_email']  = 'Email';
+$lang['login_identity_username']  = 'Gebruikersnaam';
 $lang['login_identity_label']  = 'Email/Gebruikersnaam:';
 $lang['login_password_label']  = 'Wachtwoord:';
 $lang['login_remember_label']  = 'Onthoud mij:';

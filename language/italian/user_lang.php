@@ -23,7 +23,9 @@ $lang['error_csrf'] = 'Il form non ha superato i controlli di sicurezza';
 // Login
 $lang['login_heading']         = 'Accedi';
 $lang['login_subheading']      = 'Si prega di accedere tramite email/username e password';
-$lang['login_identity_label']  = 'Email/Username:';
+$lang['login_identity_email']  = 'Email';
+$lang['login_identity_username']  = 'Username';
+$lang['login_identity_label']  = 'Email/Username';
 $lang['login_password_label']  = 'Password:';
 $lang['login_remember_label']  = 'Ricordami:';
 $lang['login_submit_btn']      = 'Accedi';

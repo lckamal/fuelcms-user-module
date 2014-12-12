@@ -25,7 +25,8 @@ class Site_users extends Module {
 			show_404();
 		}
 		
-		
+		$vars['js'] = array(js_path('course.js', 'course', 'true'), 'neckmodule/neckmodule.hotfrets');
+        $vars['css'] = array(css_path('course.css', 'course', 'true'), site_url().'assets/content-builder-scripts/content.css',site_url().'assets/content-builder-scripts/contentbuilder.css');
 		$this->fuel->admin->render('site_users/view', $vars, Fuel_admin::DISPLAY_NO_ACTION);
 	}
 

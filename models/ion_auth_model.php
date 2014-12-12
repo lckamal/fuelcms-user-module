@@ -175,7 +175,7 @@ class Ion_auth_model extends CI_Model
 		$this->load->config('user/ion_auth', TRUE);
 		$this->load->helper('cookie');
 		$this->load->helper('date');
-		$this->lang->load('ion_auth');
+		$this->lang->load('user/ion_auth');
 
 		//initialize db tables data
 		$this->tables  = $this->config->item('tables', 'ion_auth');
@@ -244,7 +244,7 @@ class Ion_auth_model extends CI_Model
 			}
 
 			$params['salt_prefix'] = $this->config->item('salt_prefix', 'ion_auth');
-			$this->load->library('bcrypt',$params);
+			$this->load->library('user/bcrypt',$params);
 		}
 
 		$this->trigger_events('model_constructor');
